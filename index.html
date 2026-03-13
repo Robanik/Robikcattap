@@ -1,184 +1,65 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Robik Cat</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Robik</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://adsgram.ai/sdk.js"></script>
     <style>
-        :root {
-            --accent: #39FF14;
-            --bg: #000;
-            --panel: #111;
-        }
-        body {
-            background-color: var(--bg);
-            color: #fff;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            overflow: hidden;
-            user-select: none;
-            -webkit-tap-highlight-color: transparent;
-        }
-        #app {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            padding: 40px 20px env(safe-area-inset-bottom);
-            box-sizing: border-box;
-        }
-        .stats { text-align: center; }
-        #balance { font-size: 64px; font-weight: 800; margin: 0; letter-spacing: -2px; }
-        .currency { color: var(--accent); font-size: 24px; font-weight: 400; margin-left: 5px; }
-        .usd-val { opacity: 0.4; font-size: 16px; margin-top: 5px; }
-
-        .main-tap {
-            position: relative;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        .coin-wrapper {
-            width: 80vw;
-            height: 80vw;
-            max-width: 320px;
-            max-height: 320px;
-            background: radial-gradient(circle, #1a1a1a 0%, #000 70%);
-            border-radius: 50%;
-            border: 8px solid var(--panel);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            box-shadow: 0 0 40px rgba(57, 255, 20, 0.05);
-            transition: transform 0.05s ease-out;
-            will-change: transform;
-        }
-        .coin-wrapper:active { transform: scale(0.92); border-color: var(--accent); }
-        #cat-img { width: 75%; height: 75%; object-fit: contain; pointer-events: none; }
-
-        .footer { width: 100%; }
-        .ad-button {
-            background-color: var(--accent);
-            color: #000;
-            border: none;
-            width: 100%;
-            padding: 20px;
-            border-radius: 18px;
-            font-size: 18px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            box-shadow: 0 10px 20px rgba(57, 255, 20, 0.2);
-        }
-        .info-bar {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 20px;
-            font-size: 12px;
-            opacity: 0.5;
-            text-transform: uppercase;
-        }
+        body { background: #000; color: #39FF14; font-family: sans-serif; text-align: center; margin: 0; user-select: none; }
+        .wrap { height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        #balance { font-size: 70px; font-weight: bold; margin: 20px 0; }
+        #coin { width: 250px; height: 250px; background: #111; border: 5px solid #333; border-radius: 50%; display: flex; justify-content: center; align-items: center; }
+        #coin:active { transform: scale(0.95); border-color: #39FF14; }
+        img { width: 80%; pointer-events: none; }
+        button { margin-top: 30px; padding: 15px 30px; background: #39FF14; border: none; border-radius: 10px; font-weight: bold; }
     </style>
 </head>
 <body>
-
-<div id="app">
-    <div class="stats">
-        <p id="balance">0<span class="currency">ROB</span></p>
-        <p class="usd-val" id="usd">≈ $0.0000</p>
-    </div>
-
-    <div class="main-tap" id="click-area">
-        <div class="coin-wrapper">
-            <img id="cat-img" src="cat.png" onerror="this.style.opacity='0'">
+    <div class="wrap">
+        <div id="balance">0</div>
+        <div id="coin" id="tapBtn">
+            <img src="cat.png" onerror="this.src='https://em-content.zobj.net/source/apple/354/cat-face_1f331.png'">
         </div>
+        <button onclick="showAds()">БОНУС +1000</button>
     </div>
 
-    <div class="footer">
-        <button class="ad-button" onclick="triggerAd()">ПОЛУЧИТЬ БОНУС</button>
-        <div class="info-bar">
-            <span>Энергия: 100%</span>
-            <span>Boost: x1</span>
-        </div>
-    </div>
-</div>
+    <script>
+        // БЛОК 1: СРАЗУ ОБЪЯВЛЯЕМ ПЕРЕМЕННЫЕ
+        let score = 0;
+        const balDisplay = document.getElementById('balance');
+        const coinBtn = document.getElementById('coin');
 
-<script>
-    const tg = window.Telegram.WebApp;
-    tg.expand();
-    tg.ready();
-
-    let count = 0;
-    const blockId = "25055";
-    const ads = window.Adsgram.init({ blockId: blockId });
-
-    const balDisplay = document.getElementById('balance');
-    const usdDisplay = document.getElementById('usd');
-
-    // Моментальная загрузка
-    function load() {
-        const saved = localStorage.getItem('rob_val');
+        // Попытка загрузить из памяти телефона
+        const saved = localStorage.getItem('my_score');
         if (saved) {
-            count = parseInt(saved);
-            updateUI();
+            score = parseInt(saved);
+            balDisplay.innerText = score;
         }
-        tg.CloudStorage.getItem('rob_val', (err, val) => {
-            if (val && parseInt(val) > count) {
-                count = parseInt(val);
-                updateUI();
+
+        // БЛОК 2: ТАП (САМОЕ ГЛАВНОЕ)
+        function doTap(e) {
+            if(e) e.preventDefault();
+            score++;
+            balDisplay.innerText = score;
+            localStorage.setItem('my_score', score);
+            
+            // Вибрация, если мы в ТГ
+            if (window.Telegram && window.Telegram.WebApp) {
+                window.Telegram.WebApp.HapticFeedback.impactOccurred('medium');
             }
-        });
-    }
-
-    function updateUI() {
-        balDisplay.innerHTML = `${count.toLocaleString()}<span class="currency">ROB</span>`;
-        usdDisplay.innerText = `≈ $${(count / 100000 * 0.05).toFixed(4)}`;
-    }
-
-    // Только для смартфонов (Touch Events)
-    const tapArea = document.getElementById('click-area');
-    tapArea.addEventListener('touchstart', (e) => {
-        e.preventDefault(); // Запрет скролла и зума
-        count += 1;
-        updateUI();
-        
-        // Вибрация
-        tg.HapticFeedback.impactOccurred('medium');
-        
-        // Сохранение в локал (мгновенно)
-        localStorage.setItem('rob_val', count.toString());
-    }, {passive: false});
-
-    // Резервный сейв в облако раз в 7 секунд
-    setInterval(() => {
-        tg.CloudStorage.setItem('rob_val', count.toString());
-    }, 7000);
-
-    async function triggerAd() {
-        tg.HapticFeedback.impactOccurred('heavy');
-        try {
-            const result = await ads.show();
-            if (result.done) {
-                count += 1000;
-                updateUI();
-                localStorage.setItem('rob_val', count.toString());
-                tg.showAlert("БОНУС +1000 НАЧИСЛЕН");
-            }
-        } catch (e) {
-            tg.showAlert("РЕКЛАМА ЕЩЕ ГРУЗИТСЯ...");
         }
-    }
 
-    load();
-</script>
+        // Вешаем событие и на тач, и на клик для надежности
+        coinBtn.addEventListener('touchstart', doTap);
+        coinBtn.addEventListener('mousedown', doTap);
 
+        // БЛОК 3: РЕКЛАМА (В ОТДЕЛЬНОМ СКРИПТЕ, ЧТОБЫ НЕ ВЕШАТЬ ТАПЫ)
+        function showAds() {
+            alert("Функция рекламы вызвана! Если Adsgram загружен, она сработает.");
+            // Тут потом добавим код Adsgram, когда клики заработают
+        }
+    </script>
+    <script src="https://adsgram.ai/sdk.js"></script>
 </body>
 </html>
