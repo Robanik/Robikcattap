@@ -2,133 +2,213 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Robik Cat Ultra</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Robik Cat Empire</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
     <script src="https://adsgram.ai/sdk.js"></script>
+    
     <style>
         :root {
             --neon-green: #39FF14;
-            --dark-bg: #0a0a0a;
-            --card-bg: #161616;
+            --neon-pink: #FF00E4;
+            --dark-bg: #030303;
+            --card-bg: rgba(30, 30, 30, 0.85);
+            --gradient-main: linear-gradient(135deg, #050505 0%, #151515 100%);
+            --haptic-scale: scale(0.95);
         }
+
+        /* Чтобы не видеть "ужас" до загрузки Vue */
+        [v-cloak] { display: none; }
+
         body {
+            background: var(--gradient-main);
             background-color: var(--dark-bg);
             color: white;
-            font-family: 'Segoe UI', Roboto, sans-serif;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
             margin: 0;
+            padding: 0;
             overflow: hidden;
             user-select: none;
             -webkit-tap-highlight-color: transparent;
+            width: 100vw;
+            height: 100vh;
         }
+
+        /* Адаптивный контейнер для мобил и ПК */
         #app {
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: space-between;
-            height: 100vh;
+            justify-content: center;
+            max-width: 480px; /* Ограничиваем ширину для ПК */
+            height: 100%;
+            margin: 0 auto; /* Центрируем */
+            padding: env(safe-area-inset-top) 15px env(safe-area-inset-bottom);
+            box-sizing: border-box;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(5px);
+            box-shadow: 0 0 100px rgba(0,0,0,0.8);
+        }
+
+        /* Хедер с балансом */
+        .header {
+            width: 100%;
+            text-align: center;
+            margin-bottom: 2vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .balance-label { font-size: 14px; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+        .balance { font-size: 56px; font-weight: 900; line-height: 1; letter-spacing: -1px; text-shadow: 0 0 30px rgba(57,255,20,0.4); }
+        .balance-rob { font-size: 32px; color: #ccc; }
+        .usd-estimate { color: #888; font-size: 18px; margin-top: 5px; }
+
+        /* Зона тапа */
+        .tap-area {
+            position: relative;
+            flex-grow: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+        }
+        .cat-visual {
+            position: relative;
+            width: min(85vw, 300px); /* Адаптивная ширина */
+            height: min(85vw, 300px);
+            background: radial-gradient(circle at center, #111 0%, #000 70%);
+            border-radius: 50%;
+            border: 6px solid #1a1a1a;
+            box-shadow: 0 0 60px rgba(57, 255, 20, 0.08);
+            transition: transform 0.08s ease-out, border-color 0.1s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+        }
+        .cat-visual:active {
+            transform: var(--haptic-scale);
+            border-color: var(--neon-green);
+            box-shadow: 0 0 80px rgba(57, 255, 20, 0.2);
+        }
+        .cat-img-wrapped { width: 100%; height: 100%; padding: 10%; box-sizing: border-box; }
+        .cat-main-image { width: 100%; height: 100%; object-fit: contain; }
+
+        /* Эффект вылетающих монет */
+        .tap-fx {
+            position: absolute;
+            color: var(--neon-green);
+            font-size: 30px;
+            font-weight: bold;
+            pointer-events: none;
+            text-shadow: 0 0 5px #000;
+            animation: floatUp 0.6s ease-out forwards;
+            opacity: 0;
+            z-index: 10;
+        }
+        @keyframes floatUp {
+            0% { transform: translateY(0) scale(1.1); opacity: 1; }
+            100% { transform: translateY(-130px) scale(0.9); opacity: 0; }
+        }
+
+        /* Футер со статами и рекламой */
+        .footer {
+            width: 100%;
+            background-color: var(--card-bg);
+            border-radius: 20px 20px 0 0;
             padding: 20px;
             box-sizing: border-box;
+            border-top: 1px solid #222;
         }
-        .header { text-align: center; margin-top: 20px; }
-        .balance { font-size: 48px; font-weight: 900; text-shadow: 0 0 20px var(--neon-green); }
-        .usd { color: #888; font-size: 18px; margin-top: 5px; }
-
-        .clicker-zone {
-            position: relative;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            width: 100%;
-        }
-        .cat-circle {
-            width: 280px;
-            height: 280px;
-            background: radial-gradient(circle, #222 0%, #000 70%);
-            border-radius: 50%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            box-shadow: 0 0 50px rgba(57, 255, 20, 0.1);
-            border: 4px solid #1a1a1a;
-            transition: transform 0.05s;
-        }
-        .cat-circle:active { transform: scale(0.92); border-color: var(--neon-green); }
-        .cat-img { width: 200px; pointer-events: none; }
-
-        .footer-stats {
-            width: 100%;
-            background: var(--card-bg);
-            padding: 20px;
-            border-radius: 24px 24px 0 0;
-            border-top: 2px solid #222;
-        }
-        .progress-bar {
-            width: 100%;
-            height: 12px;
-            background: #222;
-            border-radius: 10px;
-            margin: 15px 0;
-            overflow: hidden;
-        }
+        .stat-line { display: flex; justify-content: space-between; font-size: 13px; color: #999; margin-bottom: 5px; text-transform: uppercase; }
+        
+        .progress-bar-container { width: 100%; height: 14px; background: #222; border-radius: 7px; margin-bottom: 15px; overflow: hidden; border: 1px solid #111; }
         .progress-fill {
             height: 100%;
             background: linear-gradient(90deg, #1fdf00, var(--neon-green));
-            box-shadow: 0 0 10px var(--neon-green);
-            transition: width 0.3s;
+            box-shadow: 0 0 15px rgba(57, 255, 20, 0.8);
+            border-radius: 7px;
+            transition: width 0.3s ease-in-out;
         }
-        .btn-boost {
-            background: var(--neon-green);
-            color: black;
-            border: none;
+
+        /* Кнопка рекламы - УЛЬТРА КРАСИВАЯ */
+        .btn-ad-boost {
+            position: relative;
+            background: linear-gradient(135deg, rgba(20,20,20,0.95) 0%, rgba(5,5,5,0.98) 100%);
+            border: 2px solid #222;
+            color: #ccc;
             width: 100%;
-            padding: 15px;
-            border-radius: 15px;
-            font-size: 18px;
+            padding: 16px;
+            border-radius: 12px;
+            font-size: 16px;
             font-weight: bold;
-            box-shadow: 0 4px 15px rgba(57, 255, 20, 0.4);
+            cursor: pointer;
+            overflow: hidden;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex; align-items: center; justify-content: center; gap: 10px;
         }
-        .floating-text {
-            position: absolute;
-            color: var(--neon-green);
-            font-size: 28px;
-            font-weight: bold;
-            pointer-events: none;
-            animation: floatUp 0.6s ease-out forwards;
+        .btn-ad-boost::before {
+            content: ''; position: absolute; top: -5px; left: -5px; right: -5px; bottom: -5px;
+            background: linear-gradient(90deg, #ff00ea, #6e00f5, #00f3ff, #1fdf00, #ff00ea);
+            background-size: 400% 400%; z-index: -1;
+            filter: blur(10px); animation: neonBorder 6s linear infinite; opacity: 0.15;
         }
-        @keyframes floatUp {
-            0% { transform: translateY(0); opacity: 1; }
-            100% { transform: translateY(-100px); opacity: 0; }
+        .btn-ad-boost:active { transform: var(--haptic-scale); color: var(--neon-green); border-color: #333; }
+        
+        @keyframes neonBorder {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
         }
+
     </style>
 </head>
 <body>
-<div id="app">
+
+<div id="loading" style="position:fixed;top:0;left:0;width:100%;height:100%;background:#000;display:flex;justify-content:center;align-items:center;color:#39FF14;font-size:24px;z-index:1000;">
+    ЗАГРУЗКА ИМПЕРИИ...
+</div>
+
+<div id="app" v-cloak v-show="isLoaded">
+    
     <div class="header">
-        <div class="balance">{{ Math.floor(robiki).toLocaleString() }}</div>
-        <div class="usd">≈ ${{ (robiki / 100000 * 0.05).toFixed(3) }}</div>
+        <div class="balance-label">БАЛАНС РОБИКОВ</div>
+        <div class="balance">
+            <span>{{ intRobiki }}</span>
+        </div>
+        <div class="usd-estimate">≈ ${{ (robiki / 100000 * 0.05).toFixed(3) }}</div>
     </div>
 
-    <div class="clicker-zone">
-        <div class="cat-circle" @touchstart="handleTap">
-            <img class="cat-img" src="https://em-content.zobj.net/source/apple/354/cat-face_1f331.png">
-        </div>
-        <div v-for="f in floats" :key="f.id" class="floating-text" :style="{ left: f.x + 'px', top: f.y + 'px' }">
+    <div class="tap-area">
+        <div v-for="f in floats" :key="f.id" class="tap-fx" :style="{ left: f.x + 'px', top: f.y + 'px' }">
             +{{ clickPower }}
         </div>
+        
+        <div class="cat-visual" @touchstart="handleTapStart">
+            <div class="cat-img-wrapped">
+                <img src="cat.png" alt="Neon Cat Boss" class="cat-main-image">
+            </div>
+        </div>
     </div>
 
-    <div class="footer-stats">
-        <div style="display: flex; justify-content: space-between; font-size: 14px;">
-            <span>Энергия: {{ Math.floor(dailyMined) }} / 10M</span>
-            <span>Клик: x{{ clickPower }}</span>
+    <div class="footer">
+        <div class="stat-line">
+            <span>ДОБЫТО ({{ Math.floor(dailyMined) }} / 10M)</span>
+            <span>КЛИК: x{{ clickPower }}</span>
         </div>
-        <div class="progress-bar">
+        <div class="progress-bar-container">
             <div class="progress-fill" :style="{ width: (dailyMined / 10000000 * 100) + '%' }"></div>
         </div>
-        <button class="btn-boost" @click="showAds">📺 РЕКЛАМА (БУСТ +5000)</button>
+        
+        <button class="btn-ad-boost" @click="showAdsReward">
+            📺 СМОТРЕТЬ РЕКЛАМУ (БУСТ КЛИКА +1000)
+        </button>
     </div>
+
 </div>
 
 <script>
@@ -136,68 +216,113 @@
     tg.expand();
     tg.enableClosingConfirmation();
 
-    // Твой UnitID со скриншота
+    // !!! ЗАМЕНИ ЭТОТ ID НА СВОЙ АКТУАЛЬНЫЙ UnitID (25055) !!!
     const AdController = window.Adsgram.init({ blockId: "25055" });
 
     Vue.createApp({
         data() {
             return {
+                isLoaded: false,
                 robiki: 0,
                 clickPower: 1,
                 dailyMined: 0,
                 lastReset: Date.now(),
-                floats: []
+                floats: [] // Для анимаций +Х
             }
+        },
+        computed: {
+            intRobiki() { return Math.floor(this.robiki).toLocaleString('ru-RU'); }
         },
         mounted() {
             this.load();
-            setInterval(this.save, 5000); // Автосохранение каждые 5 сек
+            // Показываем контент, скрываем загрузку
+            document.getElementById('loading').style.display = 'none';
+            this.isLoaded = true;
+            
+            // Быстрое сохранение каждые 15 секунд (баланс)
+            setInterval(this.save, 15000); 
         },
         methods: {
-            handleTap(e) {
+            handleTapStart(e) {
                 if (this.dailyMined >= 10000000) {
                     tg.HapticFeedback.notificationOccurred('error');
+                    tg.showAlert("Дневной лимит $5 достигнут! Приходи завтра.");
                     return;
                 }
                 
-                const touch = e.touches[0];
-                this.robiki += this.clickPower;
-                this.dailyMined += this.clickPower;
+                // Мульти-тапы
+                const touches = e.changedTouches;
+                for (let i = 0; i < touches.length; i++) {
+                    this.robiki += this.clickPower;
+                    this.dailyMined += this.clickPower;
+                    this.createFloatAnimation(touches[i].clientX, touches[i].clientY);
+                }
+
+                tg.HapticFeedback.impactOccurred('medium');
+                // Моментальное сохранение только раз в 3 секунды, чтобы не спамить
+                this.throttleSave();
+            },
+            createFloatAnimation(clientX, clientY) {
+                const id = Date.now() + Math.random();
+                // Координаты относительно окна тапа
+                const tapArea = document.querySelector('.tap-area').getBoundingClientRect();
+                const x = clientX - tapArea.left - 20;
+                const y = clientY - tapArea.top - 20;
                 
-                // Анимация текста
-                const id = Date.now();
-                this.floats.push({ id, x: touch.clientX - 20, y: touch.clientY - 40 });
+                this.floats.push({ id, x, y });
                 setTimeout(() => {
                     this.floats = this.floats.filter(f => f.id !== id);
                 }, 600);
-
-                tg.HapticFeedback.impactOccurred('light');
             },
-            async showAds() {
+            async showAdsReward() {
+                tg.HapticFeedback.impactOccurred('heavy');
                 try {
+                    tg.MainButton.setText('ЗАГРУЗКА РЕКЛАМЫ...');
+                    tg.MainButton.show();
+                    
                     const res = await AdController.show();
                     if (res.done) {
-                        this.robiki += 5000;
+                        this.robiki += 1000;
+                        tg.showAlert("💰 БУСТ! Получено 1000 Робиков.");
                         this.save();
-                        tg.showAlert("Успех! +5,000 Робиков на счет.");
                     }
                 } catch (e) {
-                    tg.showAlert("Реклама еще загружается. Попробуй через минуту!");
+                    tg.showAlert("Реклама недоступна или была закрыта. Попробуй позже!");
+                } finally {
+                    tg.MainButton.hide();
                 }
             },
+            
+            // Улучшенное сохранение с защитой от спама
             save() {
                 const state = { r: this.robiki, p: this.clickPower, d: this.dailyMined, t: this.lastReset };
-                tg.CloudStorage.setItem('rob_v1', JSON.stringify(state));
+                tg.CloudStorage.setItem('rob_v2_ultra', JSON.stringify(state), (err, success) => {
+                    // console.log("Save status:", success);
+                });
             },
+            
+            _saveTimeout: null,
+            throttleSave() {
+                if (this._saveTimeout) return;
+                this._saveTimeout = setTimeout(() => {
+                    this.save();
+                    this._saveTimeout = null;
+                }, 3000); // Моментально сохраняем раз в 3 секунды макс
+            },
+
             load() {
-                tg.CloudStorage.getItem('rob_v1', (err, val) => {
+                tg.CloudStorage.getItem('rob_v2_ultra', (err, val) => {
                     if (val) {
-                        const d = JSON.parse(val);
-                        if (Date.now() - d.t > 86400000) this.dailyMined = 0;
-                        else this.dailyMined = d.d || 0;
-                        this.robiki = d.r || 0;
-                        this.clickPower = d.p || 1;
-                        this.lastReset = d.t || Date.now();
+                        try {
+                            const d = JSON.parse(val);
+                            // Сброс лимита через 24 часа
+                            if (Date.now() - (d.t || Date.now()) > 86400000) this.dailyMined = 0;
+                            else this.dailyMined = d.d || 0;
+                            
+                            this.robiki = d.r || 0;
+                            this.clickPower = d.p || 1;
+                            this.lastReset = d.t || Date.now();
+                        } catch(e) { /* Игнорируем битые данные */ }
                     }
                 });
             }
