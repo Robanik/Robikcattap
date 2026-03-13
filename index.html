@@ -3,183 +3,182 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Robik Cat Premium</title>
+    <title>Robik Cat</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://adsgram.ai/sdk.js"></script>
     <style>
         :root {
-            --bg: #000; --text: #39FF14; --card: #111; --accent: #39FF14;
-        }
-        body.light-theme {
-            --bg: #f0f0f0; --text: #1a1a1a; --card: #fff; --accent: #007aff;
+            --accent: #39FF14;
+            --bg: #000;
+            --panel: #111;
         }
         body {
-            background: var(--bg); color: var(--text);
-            font-family: -apple-system, sans-serif;
-            margin: 0; padding: 0; display: flex; justify-content: center;
-            height: 100vh; transition: background 0.3s, color 0.3s;
-            overflow: hidden; user-select: none; -webkit-tap-highlight-color: transparent;
+            background-color: var(--bg);
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow: hidden;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
         }
         #app {
-            width: 100%; max-width: 450px; display: flex; flex-direction: column;
-            align-items: center; justify-content: space-between; padding: 20px; box-sizing: border-box;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 40px 20px env(safe-area-inset-bottom);
+            box-sizing: border-box;
         }
-        /* Баланс */
-        .header { text-align: center; margin-top: 10px; }
-        #balance { font-size: 52px; font-weight: 900; margin: 0; }
-        .usd { opacity: 0.6; font-size: 18px; }
+        .stats { text-align: center; }
+        #balance { font-size: 64px; font-weight: 800; margin: 0; letter-spacing: -2px; }
+        .currency { color: var(--accent); font-size: 24px; font-weight: 400; margin-left: 5px; }
+        .usd-val { opacity: 0.4; font-size: 16px; margin-top: 5px; }
 
-        /* Тапалка */
-        .tap-zone { position: relative; cursor: pointer; transition: transform 0.05s; }
-        .tap-zone:active { transform: scale(0.94); }
-        .circle {
-            width: 280px; height: 280px; border-radius: 50%;
-            background: radial-gradient(circle, var(--card) 0%, var(--bg) 80%);
-            border: 4px solid var(--card); display: flex; justify-content: center; align-items: center;
-            box-shadow: 0 0 30px rgba(0,0,0,0.5);
+        .main-tap {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
-        #cat-img { width: 80%; height: 80%; object-fit: contain; }
+        .coin-wrapper {
+            width: 80vw;
+            height: 80vw;
+            max-width: 320px;
+            max-height: 320px;
+            background: radial-gradient(circle, #1a1a1a 0%, #000 70%);
+            border-radius: 50%;
+            border: 8px solid var(--panel);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 0 40px rgba(57, 255, 20, 0.05);
+            transition: transform 0.05s ease-out;
+            will-change: transform;
+        }
+        .coin-wrapper:active { transform: scale(0.92); border-color: var(--accent); }
+        #cat-img { width: 75%; height: 75%; object-fit: contain; pointer-events: none; }
 
-        /* Меню настроек */
-        .settings-btn { position: absolute; top: 20px; right: 20px; font-size: 24px; cursor: pointer; opacity: 0.7; }
-        .modal {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8); z-index: 100; justify-content: center; align-items: center;
+        .footer { width: 100%; }
+        .ad-button {
+            background-color: var(--accent);
+            color: #000;
+            border: none;
+            width: 100%;
+            padding: 20px;
+            border-radius: 18px;
+            font-size: 18px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 10px 20px rgba(57, 255, 20, 0.2);
         }
-        .modal-content {
-            background: var(--card); padding: 30px; border-radius: 25px; width: 80%; max-width: 300px;
-            border: 1px solid var(--text);
+        .info-bar {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+            font-size: 12px;
+            opacity: 0.5;
+            text-transform: uppercase;
         }
-
-        /* Кнопки */
-        .btn {
-            width: 100%; padding: 15px; margin: 10px 0; border-radius: 15px;
-            border: none; font-weight: bold; cursor: pointer; font-size: 16px;
-            background: var(--text); color: var(--bg);
-        }
-        .close-modal { background: #ff3b30; color: white; margin-top: 20px; }
     </style>
 </head>
-<body class="dark-theme">
+<body>
 
 <div id="app">
-    <div class="settings-btn" onclick="toggleModal(true)">⚙️</div>
-
-    <div class="header">
-        <p style="margin:0; opacity:0.5; font-size:12px; letter-spacing:1px;">ВАШ БАЛАНС</p>
-        <h1 id="balance">0</h1>
-        <div class="usd" id="usd">≈ $0.0000</div>
+    <div class="stats">
+        <p id="balance">0<span class="currency">ROB</span></p>
+        <p class="usd-val" id="usd">≈ $0.0000</p>
     </div>
 
-    <div class="tap-zone" id="tap-btn">
-        <div class="circle">
-            <img id="cat-img" src="cat.png" onerror="this.src='https://em-content.zobj.net/source/apple/354/cat-face_1f331.png'">
+    <div class="main-tap" id="click-area">
+        <div class="coin-wrapper">
+            <img id="cat-img" src="cat.png" onerror="this.style.opacity='0'">
         </div>
     </div>
 
-    <div style="width: 100%;">
-        <button class="btn" onclick="runAd()">📺 БОНУС +1,000</button>
-        <p style="font-size: 12px; opacity: 0.5; text-align: center;">Клик: x1 | Лимит: 10M/день</p>
+    <div class="footer">
+        <button class="ad-button" onclick="triggerAd()">ПОЛУЧИТЬ БОНУС</button>
+        <div class="info-bar">
+            <span>Энергия: 100%</span>
+            <span>Boost: x1</span>
+        </div>
     </div>
 </div>
-
-<div class="modal" id="settings-modal">
-    <div class="modal-content">
-        <h3>Настройки</h3>
-        <button class="btn" onclick="toggleTheme()">🌓 Сменить тему</button>
-        <button class="btn" onclick="toggleSound()">🔊 Звук: <span id="sound-status">ВКЛ</span></button>
-        <button class="btn close-modal" onclick="toggleModal(false)">Закрыть</button>
-    </div>
-</div>
-
-<audio id="click-sound" src="https://www.soundjay.com/buttons/button-16.mp3" preload="auto"></audio>
 
 <script>
     const tg = window.Telegram.WebApp;
     tg.expand();
+    tg.ready();
 
-    let robiki = 0;
-    let isDark = true;
-    let soundOn = true;
-    const AdController = window.Adsgram.init({ blockId: "25055" });
+    let count = 0;
+    const blockId = "25055";
+    const ads = window.Adsgram.init({ blockId: blockId });
 
-    // Инициализация
-    function init() {
-        tg.CloudStorage.getItem('rob_premium_data', (err, val) => {
-            if (val) {
-                const data = JSON.parse(val);
-                robiki = data.r || 0;
-                isDark = data.theme !== 'light';
-                soundOn = data.sound !== false;
-                applySettings();
-                render();
+    const balDisplay = document.getElementById('balance');
+    const usdDisplay = document.getElementById('usd');
+
+    // Моментальная загрузка
+    function load() {
+        const saved = localStorage.getItem('rob_val');
+        if (saved) {
+            count = parseInt(saved);
+            updateUI();
+        }
+        tg.CloudStorage.getItem('rob_val', (err, val) => {
+            if (val && parseInt(val) > count) {
+                count = parseInt(val);
+                updateUI();
             }
         });
     }
 
-    function render() {
-        document.getElementById('balance').innerText = Math.floor(robiki).toLocaleString();
-        document.getElementById('usd').innerText = "≈ $" + (robiki / 100000 * 0.05).toFixed(4);
+    function updateUI() {
+        balDisplay.innerHTML = `${count.toLocaleString()}<span class="currency">ROB</span>`;
+        usdDisplay.innerText = `≈ $${(count / 100000 * 0.05).toFixed(4)}`;
     }
 
-    function tap(e) {
-        if (e) e.preventDefault();
-        robiki += 1;
-        render();
-        if (soundOn) {
-            const s = document.getElementById('click-sound');
-            s.currentTime = 0; s.play();
-        }
+    // Только для смартфонов (Touch Events)
+    const tapArea = document.getElementById('click-area');
+    tapArea.addEventListener('touchstart', (e) => {
+        e.preventDefault(); // Запрет скролла и зума
+        count += 1;
+        updateUI();
+        
+        // Вибрация
         tg.HapticFeedback.impactOccurred('medium');
-        save();
-    }
+        
+        // Сохранение в локал (мгновенно)
+        localStorage.setItem('rob_val', count.toString());
+    }, {passive: false});
 
-    // Обработка кликов
-    const tapBtn = document.getElementById('tap-btn');
-    tapBtn.addEventListener('touchstart', tap);
-    tapBtn.addEventListener('click', (e) => { if (!('ontouchstart' in window)) tap(e); });
+    // Резервный сейв в облако раз в 7 секунд
+    setInterval(() => {
+        tg.CloudStorage.setItem('rob_val', count.toString());
+    }, 7000);
 
-    // Настройки
-    function toggleModal(show) {
-        document.getElementById('settings-modal').style.display = show ? 'flex' : 'none';
-    }
-
-    function toggleTheme() {
-        isDark = !isDark;
-        applySettings();
-        save();
-    }
-
-    function toggleSound() {
-        soundOn = !soundOn;
-        document.getElementById('sound-status').innerText = soundOn ? 'ВКЛ' : 'ВЫКЛ';
-        save();
-    }
-
-    function applySettings() {
-        document.body.className = isDark ? 'dark-theme' : 'light-theme';
-        document.getElementById('sound-status').innerText = soundOn ? 'ВКЛ' : 'ВЫКЛ';
-    }
-
-    function save() {
-        const data = { r: robiki, theme: isDark ? 'dark' : 'light', sound: soundOn };
-        tg.CloudStorage.setItem('rob_premium_data', JSON.stringify(data));
-    }
-
-    async function runAd() {
+    async function triggerAd() {
+        tg.HapticFeedback.impactOccurred('heavy');
         try {
-            const res = await AdController.show();
-            if (res.done) {
-                robiki += 1000;
-                render(); save();
-                tg.showAlert("💰 +1,000 Робиков начислены!");
+            const result = await ads.show();
+            if (result.done) {
+                count += 1000;
+                updateUI();
+                localStorage.setItem('rob_val', count.toString());
+                tg.showAlert("БОНУС +1000 НАЧИСЛЕН");
             }
         } catch (e) {
-            tg.showAlert("Реклама подбирается. Попробуй через 30 секунд!");
+            tg.showAlert("РЕКЛАМА ЕЩЕ ГРУЗИТСЯ...");
         }
     }
 
-    init();
+    load();
 </script>
+
 </body>
 </html>
