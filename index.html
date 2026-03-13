@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Robik Cat Tap</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://adsgram.ai/sdk.js"></script>
+    
+    <style>
+        body { background: #000; color: #fff; font-family: sans-serif; text-align: center; margin: 0; overflow: hidden; user-select: none; }
+        #app { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; }
+        .balance { font-size: 36px; font-weight: bold; margin-bottom: 5px; }
+        .usd { color: #888; margin-bottom: 30px; }
+        #cat { width: 220px; cursor: pointer; transition: transform 0.1s; -webkit-tap-highlight-color: transparent; }
+        #cat:active { transform: scale(0.9); }
+        .btn-ad { background: #39FF14; color: #000; border: none; padding: 12px 24px; border-radius: 50px; font-weight: bold; margin-top: 30px; }
+        .stats { margin-top: 20px; font-size: 14px; color: #555; }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <div class="balance">{{ Math.floor(robiki) }} р.</div>
+    <div class="usd">≈ ${{ (robiki / 100000 * 0.05).toFixed(4) }}</div>
+
+    <img id="cat" src="https://em-content.zobj.net/source/apple/354/cat-face_1f331.png" @click="tap">
+
+    <button class="btn-ad" @click="watchAd">📺 Буст клика (+1)</button>
+    
+    <div class="stats">
+        Сила клика: {{ clickPower }} | Лимит: {{ Math.floor(dailyMined) }}/10M
+    </div>
+</div>
+
+<script>
+    const tg = window.Telegram.WebApp;
+    tg.expand();
+
+    Vue.createApp({
+        data() {
+            return {
+                robiki: 0,
+                clickPower: 1,
+                dailyMined: 0,
+                lastReset: Date.now()
+            }
+        },
+        mounted() {
+            this.loadData();
+        },
+        methods: {
+            tap() {
+                if (this.dailyMined < 10000000) {
+                    this.robiki += this.clickPower;
+                    this.dailyMined += this.clickPower;
+                    this.saveData();
+                    tg.HapticFeedback.impactOccurred('medium');
+                } else {
+                    tg.showAlert("Дневной лимит $5 достигнут!");
+                }
+            },
+            watchAd() {
+                // Здесь будет вызов AdsGram, когда получишь ID
+                // Для теста просто даем бонус:
+                tg.showConfirm("Посмотреть рекламу для усиления?", (ok) => {
+                    if(ok) {
+                        this.clickPower++;
+                        this.saveData();
+                        tg.showAlert("Клик усилен!");
+                    }
+                });
+            },
+            saveData() {
+                const data = JSON.stringify({
+                    r: this.robiki,
+                    p: this.clickPower,
+                    d: this.dailyMined,
+                    t: this.lastReset
+                });
+                // Сохраняем в облако Телеграма
+                tg.CloudStorage.setItem('user_data', data);
+            },
+            loadData() {
+                tg.CloudStorage.getItem('user_data', (err, val) => {
+                    if (!err && val) {
+                        const d = JSON.parse(val);
+                        // Проверка сброса лимита (раз в сутки)
+                        if (Date.now() - d.t > 86400000) {
+                            this.dailyMined = 0;
+                            this.lastReset = Date.now();
+                        } else {
+                            this.dailyMined = d.d || 0;
+                            this.lastReset = d.t || Date.now();
+                        }
+                        this.robiki = d.r || 0;
+                        this.clickPower = d.p || 1;
+                    }
+                });
+            }
+        }
+    }).mount('#app');
+</script>
+</body>
+</html>
+
