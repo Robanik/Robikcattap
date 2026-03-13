@@ -3,40 +3,141 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Robik Cat Tap</title>
+    <title>Robik Cat Ultra</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://adsgram.ai/sdk.js"></script>
-    
     <style>
-        body { background: #000; color: #fff; font-family: sans-serif; text-align: center; margin: 0; overflow: hidden; user-select: none; }
-        #app { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; }
-        .balance { font-size: 36px; font-weight: bold; margin-bottom: 5px; }
-        .usd { color: #888; margin-bottom: 30px; }
-        #cat { width: 220px; cursor: pointer; transition: transform 0.1s; -webkit-tap-highlight-color: transparent; }
-        #cat:active { transform: scale(0.9); }
-        .btn-ad { background: #39FF14; color: #000; border: none; padding: 12px 24px; border-radius: 50px; font-weight: bold; margin-top: 30px; }
-        .stats { margin-top: 20px; font-size: 14px; color: #555; }
+        :root {
+            --neon-green: #39FF14;
+            --dark-bg: #0a0a0a;
+            --card-bg: #161616;
+        }
+        body {
+            background-color: var(--dark-bg);
+            color: white;
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            overflow: hidden;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        #app {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .header { text-align: center; margin-top: 20px; }
+        .balance { font-size: 48px; font-weight: 900; text-shadow: 0 0 20px var(--neon-green); }
+        .usd { color: #888; font-size: 18px; margin-top: 5px; }
+
+        .clicker-zone {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+        }
+        .cat-circle {
+            width: 280px;
+            height: 280px;
+            background: radial-gradient(circle, #222 0%, #000 70%);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 0 50px rgba(57, 255, 20, 0.1);
+            border: 4px solid #1a1a1a;
+            transition: transform 0.05s;
+        }
+        .cat-circle:active { transform: scale(0.92); border-color: var(--neon-green); }
+        .cat-img { width: 200px; pointer-events: none; }
+
+        .footer-stats {
+            width: 100%;
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 24px 24px 0 0;
+            border-top: 2px solid #222;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 12px;
+            background: #222;
+            border-radius: 10px;
+            margin: 15px 0;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #1fdf00, var(--neon-green));
+            box-shadow: 0 0 10px var(--neon-green);
+            transition: width 0.3s;
+        }
+        .btn-boost {
+            background: var(--neon-green);
+            color: black;
+            border: none;
+            width: 100%;
+            padding: 15px;
+            border-radius: 15px;
+            font-size: 18px;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(57, 255, 20, 0.4);
+        }
+        .floating-text {
+            position: absolute;
+            color: var(--neon-green);
+            font-size: 28px;
+            font-weight: bold;
+            pointer-events: none;
+            animation: floatUp 0.6s ease-out forwards;
+        }
+        @keyframes floatUp {
+            0% { transform: translateY(0); opacity: 1; }
+            100% { transform: translateY(-100px); opacity: 0; }
+        }
     </style>
 </head>
 <body>
-
 <div id="app">
-    <div class="balance">{{ Math.floor(robiki) }} р.</div>
-    <div class="usd">≈ ${{ (robiki / 100000 * 0.05).toFixed(4) }}</div>
+    <div class="header">
+        <div class="balance">{{ Math.floor(robiki).toLocaleString() }}</div>
+        <div class="usd">≈ ${{ (robiki / 100000 * 0.05).toFixed(3) }}</div>
+    </div>
 
-    <img id="cat" src="https://em-content.zobj.net/source/apple/354/cat-face_1f331.png" @click="tap">
+    <div class="clicker-zone">
+        <div class="cat-circle" @touchstart="handleTap">
+            <img class="cat-img" src="https://em-content.zobj.net/source/apple/354/cat-face_1f331.png">
+        </div>
+        <div v-for="f in floats" :key="f.id" class="floating-text" :style="{ left: f.x + 'px', top: f.y + 'px' }">
+            +{{ clickPower }}
+        </div>
+    </div>
 
-    <button class="btn-ad" @click="watchAd">📺 Буст клика (+1)</button>
-    
-    <div class="stats">
-        Сила клика: {{ clickPower }} | Лимит: {{ Math.floor(dailyMined) }}/10M
+    <div class="footer-stats">
+        <div style="display: flex; justify-content: space-between; font-size: 14px;">
+            <span>Энергия: {{ Math.floor(dailyMined) }} / 10M</span>
+            <span>Клик: x{{ clickPower }}</span>
+        </div>
+        <div class="progress-bar">
+            <div class="progress-fill" :style="{ width: (dailyMined / 10000000 * 100) + '%' }"></div>
+        </div>
+        <button class="btn-boost" @click="showAds">📺 РЕКЛАМА (БУСТ +5000)</button>
     </div>
 </div>
 
 <script>
     const tg = window.Telegram.WebApp;
     tg.expand();
+    tg.enableClosingConfirmation();
+
+    // Твой UnitID со скриншота
+    const AdController = window.Adsgram.init({ blockId: "25055" });
 
     Vue.createApp({
         data() {
@@ -44,58 +145,59 @@
                 robiki: 0,
                 clickPower: 1,
                 dailyMined: 0,
-                lastReset: Date.now()
+                lastReset: Date.now(),
+                floats: []
             }
         },
         mounted() {
-            this.loadData();
+            this.load();
+            setInterval(this.save, 5000); // Автосохранение каждые 5 сек
         },
         methods: {
-            tap() {
-                if (this.dailyMined < 10000000) {
-                    this.robiki += this.clickPower;
-                    this.dailyMined += this.clickPower;
-                    this.saveData();
-                    tg.HapticFeedback.impactOccurred('medium');
-                } else {
-                    tg.showAlert("Дневной лимит $5 достигнут!");
+            handleTap(e) {
+                if (this.dailyMined >= 10000000) {
+                    tg.HapticFeedback.notificationOccurred('error');
+                    return;
+                }
+                
+                const touch = e.touches[0];
+                this.robiki += this.clickPower;
+                this.dailyMined += this.clickPower;
+                
+                // Анимация текста
+                const id = Date.now();
+                this.floats.push({ id, x: touch.clientX - 20, y: touch.clientY - 40 });
+                setTimeout(() => {
+                    this.floats = this.floats.filter(f => f.id !== id);
+                }, 600);
+
+                tg.HapticFeedback.impactOccurred('light');
+            },
+            async showAds() {
+                try {
+                    const res = await AdController.show();
+                    if (res.done) {
+                        this.robiki += 5000;
+                        this.save();
+                        tg.showAlert("Успех! +5,000 Робиков на счет.");
+                    }
+                } catch (e) {
+                    tg.showAlert("Реклама еще загружается. Попробуй через минуту!");
                 }
             },
-            watchAd() {
-                // Здесь будет вызов AdsGram, когда получишь ID
-                // Для теста просто даем бонус:
-                tg.showConfirm("Посмотреть рекламу для усиления?", (ok) => {
-                    if(ok) {
-                        this.clickPower++;
-                        this.saveData();
-                        tg.showAlert("Клик усилен!");
-                    }
-                });
+            save() {
+                const state = { r: this.robiki, p: this.clickPower, d: this.dailyMined, t: this.lastReset };
+                tg.CloudStorage.setItem('rob_v1', JSON.stringify(state));
             },
-            saveData() {
-                const data = JSON.stringify({
-                    r: this.robiki,
-                    p: this.clickPower,
-                    d: this.dailyMined,
-                    t: this.lastReset
-                });
-                // Сохраняем в облако Телеграма
-                tg.CloudStorage.setItem('user_data', data);
-            },
-            loadData() {
-                tg.CloudStorage.getItem('user_data', (err, val) => {
-                    if (!err && val) {
+            load() {
+                tg.CloudStorage.getItem('rob_v1', (err, val) => {
+                    if (val) {
                         const d = JSON.parse(val);
-                        // Проверка сброса лимита (раз в сутки)
-                        if (Date.now() - d.t > 86400000) {
-                            this.dailyMined = 0;
-                            this.lastReset = Date.now();
-                        } else {
-                            this.dailyMined = d.d || 0;
-                            this.lastReset = d.t || Date.now();
-                        }
+                        if (Date.now() - d.t > 86400000) this.dailyMined = 0;
+                        else this.dailyMined = d.d || 0;
                         this.robiki = d.r || 0;
                         this.clickPower = d.p || 1;
+                        this.lastReset = d.t || Date.now();
                     }
                 });
             }
@@ -104,4 +206,3 @@
 </script>
 </body>
 </html>
-
