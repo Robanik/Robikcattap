@@ -1,65 +1,193 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Robik</title>
+    <title>Robik Cat Tap</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://adsgram.ai/sdk.js"></script>
     <style>
-        body { background: #000; color: #39FF14; font-family: sans-serif; text-align: center; margin: 0; user-select: none; }
-        .wrap { height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; }
-        #balance { font-size: 70px; font-weight: bold; margin: 20px 0; }
-        #coin { width: 250px; height: 250px; background: #111; border: 5px solid #333; border-radius: 50%; display: flex; justify-content: center; align-items: center; }
-        #coin:active { transform: scale(0.95); border-color: #39FF14; }
-        img { width: 80%; pointer-events: none; }
-        button { margin-top: 30px; padding: 15px 30px; background: #39FF14; border: none; border-radius: 10px; font-weight: bold; }
+        :root {
+            --main-color: #39FF14;
+            --bg-color: #000;
+            --card-bg: #111;
+        }
+
+        body { 
+            background: var(--bg-color); 
+            color: var(--main-color); 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            text-align: center; 
+            margin: 0; 
+            user-select: none; 
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+
+        .header { padding: 20px; display: flex; justify-content: space-between; align-items: center; }
+        
+        #balance { font-size: 60px; font-weight: 800; margin-top: 10vh; text-shadow: 0 0 20px rgba(57, 255, 20, 0.5); }
+
+        .coin-container { position: relative; display: flex; justify-content: center; align-items: center; margin-top: 50px; }
+        
+        #coin { 
+            width: 260px; height: 260px; 
+            background: radial-gradient(circle, #222 0%, #000 100%); 
+            border: 8px solid #333; 
+            border-radius: 50%; 
+            display: flex; justify-content: center; align-items: center; 
+            transition: transform 0.1s;
+            box-shadow: 0 0 30px rgba(0,0,0,0.5);
+        }
+
+        #coin:active { transform: scale(0.92); border-color: var(--main-color); }
+
+        .tap-number {
+            position: absolute;
+            color: #fff;
+            font-size: 32px;
+            font-weight: bold;
+            pointer-events: none;
+            animation: moveUp 0.8s ease-out forwards;
+        }
+
+        @keyframes moveUp {
+            0% { transform: translateY(0); opacity: 1; }
+            100% { transform: translateY(-150px); opacity: 0; }
+        }
+
+        .footer-btns { position: fixed; bottom: 30px; width: 100%; display: flex; justify-content: center; gap: 20px; }
+
+        .btn {
+            padding: 15px 25px;
+            background: var(--main-color);
+            color: #000;
+            border: none;
+            border-radius: 12px;
+            font-weight: bold;
+            font-size: 16px;
+            box-shadow: 0 4px 15px rgba(57, 255, 20, 0.3);
+        }
+
+        /* Меню настроек */
+        #settingsModal {
+            display: none;
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: #1a1a1a; padding: 30px; border-radius: 20px; border: 2px solid var(--main-color);
+            z-index: 100; width: 80%;
+        }
     </style>
 </head>
 <body>
-    <div class="wrap">
-        <div id="balance">0</div>
-        <div id="coin" id="tapBtn">
-            <img src="cat.png" onerror="this.src='https://em-content.zobj.net/source/apple/354/cat-face_1f331.png'">
-        </div>
-        <button onclick="showAds()">БОНУС +1000</button>
+
+    <div class="header">
+        <div id="status">Online</div>
+        <button class="btn" onclick="toggleSettings()" style="padding: 8px 15px;">⚙️</button>
     </div>
 
+    <div id="balance">0</div>
+
+    <div class="coin-container" id="coinArea">
+        <div id="coin">
+            <img src="cat.png" style="width: 70%;" onerror="this.src='https://em-content.zobj.net/source/apple/354/cat-face_1f331.png'">
+        </div>
+    </div>
+
+    <div class="footer-btns">
+        <button class="btn" onclick="showAds()">🎁 БОНУС +1000</button>
+    </div>
+
+    <div id="settingsModal">
+        <h3>Настройки</h3>
+        <label><input type="checkbox" id="soundCheck" checked> Звук</label><br><br>
+        <label><input type="checkbox" id="vibroCheck" checked> Вибрация</label><br><br>
+        <button class="btn" onclick="toggleSettings()">Закрыть</button>
+    </div>
+
+    <audio id="tapSound" src="https://www.soundjay.com/buttons/sounds/button-16.mp3"></audio>
+
     <script>
-        // БЛОК 1: СРАЗУ ОБЪЯВЛЯЕМ ПЕРЕМЕННЫЕ
-        let score = 0;
+        const tg = window.Telegram.WebApp;
+        tg.expand(); // Развернуть на весь экран
+
+        let score = parseInt(localStorage.getItem('rob_score')) || 0;
+        let settings = JSON.parse(localStorage.getItem('rob_settings')) || { sound: true, vibro: true };
+        
         const balDisplay = document.getElementById('balance');
-        const coinBtn = document.getElementById('coin');
+        const coinBtn = document.getElementById('coinArea');
+        const tapSound = document.getElementById('tapSound');
 
-        // Попытка загрузить из памяти телефона
-        const saved = localStorage.getItem('my_score');
-        if (saved) {
-            score = parseInt(saved);
-            balDisplay.innerText = score;
-        }
+        balDisplay.innerText = score;
 
-        // БЛОК 2: ТАП (САМОЕ ГЛАВНОЕ)
-        function doTap(e) {
-            if(e) e.preventDefault();
-            score++;
-            balDisplay.innerText = score;
-            localStorage.setItem('my_score', score);
+        // Функция тапа
+        function handleTap(e) {
+            e.preventDefault();
             
-            // Вибрация, если мы в ТГ
-            if (window.Telegram && window.Telegram.WebApp) {
-                window.Telegram.WebApp.HapticFeedback.impactOccurred('medium');
+            // Координаты для анимации (мышка или палец)
+            const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+            const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
+
+            score++;
+            updateUI();
+            createTapAnim(clientX, clientY);
+
+            // Вибрация
+            if (settings.vibro) tg.HapticFeedback.impactOccurred('medium');
+            
+            // Звук
+            if (settings.sound) {
+                tapSound.currentTime = 0;
+                tapSound.play();
             }
         }
 
-        // Вешаем событие и на тач, и на клик для надежности
-        coinBtn.addEventListener('touchstart', doTap);
-        coinBtn.addEventListener('mousedown', doTap);
-
-        // БЛОК 3: РЕКЛАМА (В ОТДЕЛЬНОМ СКРИПТЕ, ЧТОБЫ НЕ ВЕШАТЬ ТАПЫ)
-        function showAds() {
-            alert("Функция рекламы вызвана! Если Adsgram загружен, она сработает.");
-            // Тут потом добавим код Adsgram, когда клики заработают
+        function updateUI() {
+            balDisplay.innerText = score;
+            localStorage.setItem('rob_score', score);
         }
+
+        function createTapAnim(x, y) {
+            const el = document.createElement('div');
+            el.className = 'tap-number';
+            el.innerText = '+1';
+            el.style.left = `${x - 10}px`;
+            el.style.top = `${y - 40}px`;
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 800);
+        }
+
+        coinBtn.addEventListener('touchstart', handleTap);
+        coinBtn.addEventListener('mousedown', handleTap);
+
+        // --- ADSGRAM ИНТЕГРАЦИЯ ---
+        const AdController = window.Adsgram.init({ blockId: "ТВОЙ_BLOCK_ID_ИЗ_ADSGRAM" });
+
+        function showAds() {
+            AdController.show().then((result) => {
+                // Если досмотрел до конца
+                score += 1000;
+                updateUI();
+                tg.showAlert("Успех! +1000 ROB начислено!");
+            }).catch((result) => {
+                tg.showAlert("Нужно досмотреть рекламу до конца!");
+            });
+        }
+
+        // --- НАСТРОЙКИ ---
+        function toggleSettings() {
+            const modal = document.getElementById('settingsModal');
+            modal.style.display = modal.style.display === 'block' ? 'none' : 'block';
+        }
+
+        document.getElementById('soundCheck').addEventListener('change', (e) => {
+            settings.sound = e.target.checked;
+            localStorage.setItem('rob_settings', JSON.stringify(settings));
+        });
+
+        document.getElementById('vibroCheck').addEventListener('change', (e) => {
+            settings.vibro = e.target.checked;
+            localStorage.setItem('rob_settings', JSON.stringify(settings));
+        });
     </script>
-    <script src="https://adsgram.ai/sdk.js"></script>
 </body>
 </html>
